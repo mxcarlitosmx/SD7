@@ -450,39 +450,62 @@
 			var carrito_local = []; // Arreglo para guardar visualmente lo que compramos
 
 			function comprar_articulo(index) {
-				var art = resultados_busqueda[index];
-				var cantidad = parseInt(get("cant_" + art.id_articulo).value);
-				
-				if (isNaN(cantidad) || cantidad <= 0) {
-					alert("Ingresa una cantidad válida.");
-					return;
-				}
-
-				var cliente = new WSClient(URL);
-				var compra = { id_articulo: art.id_articulo, cantidad: cantidad };
-				
-				// Llamada al Back-End (RF-BE-3)
-				cliente.put("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, function(code, result) {
-					if (code == 200) {
-						alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
-						
-						// Si hay éxito, lo agregamos a nuestro carrito visual
-						var existe = carrito_local.find(item => item.id_articulo == art.id_articulo);
-						if (existe) {
-							existe.cantidad += cantidad;
-						} else {
-							carrito_local.push({
-								id_articulo: art.id_articulo,
-								nombre: art.nombre,
-								precio: art.precio,
-								cantidad: cantidad,
-								foto: art.foto
-							});
-						}
-					} else {
-						alert("No se pudo comprar: " + (result.mensaje || "Stock insuficiente"));
+				try {
+					var art = resultados_busqueda[index];
+					
+					// 1. Validamos si tu back-end manda 'id_articulo' o solo 'id'
+					var id_art = art.id_articulo || art.id; 
+					
+					// 2. Tomamos el valor de la caja de texto con validación
+					var input_cant = document.getElementById("cant_" + id_art);
+					if (!input_cant) {
+						alert("No se encontró la caja de texto. ID detectado: " + id_art);
+						return;
 					}
-				});
+
+					var cantidad = parseInt(input_cant.value);
+					if (isNaN(cantidad) || cantidad <= 0) {
+						alert("Ingresa una cantidad válida.");
+						return;
+					}
+
+					var cliente = new WSClient(URL);
+					var compra = { id_articulo: id_art, cantidad: cantidad };
+					
+					// 3. Procesamos la respuesta del servidor
+					var procesar_respuesta = function(code, result) {
+						if (code == 200) {
+							alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
+							
+							// Guardamos en el carrito local
+							var existe = carrito_local.find(item => (item.id_articulo || item.id) == id_art);
+							if (existe) {
+								existe.cantidad += cantidad;
+							} else {
+								carrito_local.push({
+									id_articulo: id_art,
+									nombre: art.nombre,
+									precio: art.precio,
+									cantidad: cantidad,
+									foto: art.foto
+								});
+							}
+						} else {
+							alert("Error del servidor (" + code + "): " + JSON.stringify(result));
+						}
+					};
+
+					// 4. Verificamos si WSClient tiene el método PUT, si no, lo forzamos con POST
+					if (typeof cliente.put !== 'function') {
+						cliente.post("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, procesar_respuesta);
+					} else {
+						cliente.put("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, procesar_respuesta);
+					}
+
+				} catch(error) {
+					// Si algo más falla, esto te avisará en pantalla en lugar de quedarse pasmado
+					alert("El código se detuvo por este error: " + error.message);
+				}
 			}
 
 			// LOGICA PARA RF-FE-2.3 a 2.5: EL CARRITO
