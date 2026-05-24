@@ -452,13 +452,11 @@
 			function comprar_articulo(index) {
 				try {
 					var art = resultados_busqueda[index];
-					
-					// Validamos el ID
 					var id_art = art.id_articulo || art.id; 
 					
 					var input_cant = document.getElementById("cant_" + id_art);
 					if (!input_cant) {
-						alert("No se encontró la caja de texto. ID: " + id_art);
+						alert("No se encontró la caja de texto.");
 						return;
 					}
 
@@ -469,10 +467,22 @@
 					}
 
 					var cliente = new WSClient(URL);
-					var compra = { id_articulo: id_art, cantidad: cantidad };
 					
-					// Hacemos la petición ESTRICTAMENTE por POST (soluciona el Error 405)
-					cliente.post("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, function(code, result) {
+					// 1. Los mandamos en el Body (JSON) por si Java usa @Consumes
+					var compra_body = { 
+						id_articulo: id_art, 
+						id: id_art, 
+						cantidad: cantidad 
+					};
+					
+					// 2. Y TAMBIÉN los mandamos en la URL por si Java usa @QueryParam
+					var ruta_segura = "compra_articulo?id_usuario=" + id_usuario + 
+									  "&token=" + token + 
+									  "&id_articulo=" + id_art + 
+									  "&cantidad=" + cantidad;
+
+					// 3. Volvemos al PUT que es el método que Tomcat está exigiendo
+					cliente.put(ruta_segura, compra_body, function(code, result) {
 						if (code == 200) {
 							alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
 							
@@ -490,8 +500,7 @@
 								});
 							}
 						} else {
-							// Si caducó el token u ocurre otro error, nos avisará claramente
-							alert("Error al comprar: " + (result.mensaje || JSON.stringify(result)));
+							alert("Error al comprar (" + code + "): " + JSON.stringify(result));
 						}
 					});
 
