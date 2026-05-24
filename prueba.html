@@ -549,16 +549,24 @@
 				if (!confirm("¿Deseas eliminar este artículo del carrito?")) return;
 				
 				var cliente = new WSClient(URL);
-				// Llamada al Back-End (RF-BE-4)
-				cliente.delete("elimina_articulo_carrito_compra?id_usuario=" + id_usuario + "&token=" + token + "&id_articulo=" + id_art, function(code, result) {
-					if (code == 200) {
-						alert("Artículo eliminado. El stock ha sido devuelto.");
-						carrito_local.splice(index, 1); // Lo borramos de la vista
-						renderizar_carrito();
-					} else {
-						alert("Error al eliminar: " + JSON.stringify(result));
+				
+				// Formato estricto de 3 parámetros para el DELETE
+				cliente.delete("elimina_articulo_carrito_compra", 
+					{ // Parámetros que Java espera en la URL
+						id_usuario: id_usuario,
+						token: token,
+						id_articulo: id_art
+					}, 
+					function(code, result) { // Función de respuesta
+						if (code == 200) {
+							alert("Artículo eliminado. El stock ha sido devuelto.");
+							carrito_local.splice(index, 1); // Lo borramos de la vista
+							renderizar_carrito();
+						} else {
+							alert("Error al eliminar: " + (result.mensaje || JSON.stringify(result)));
+						}
 					}
-				});
+				);
 			}
 
 			function vaciar_carrito() {
@@ -569,17 +577,24 @@
 				if (!confirm("¿Deseas vaciar por completo el carrito de compra?")) return;
 
 				var cliente = new WSClient(URL);
-				// Llamada al Back-End (RF-BE-5)
-				cliente.delete("elimina_carrito_compra?id_usuario=" + id_usuario + "&token=" + token, function(code, result) {
-					if (code == 200) {
-						alert("Carrito vaciado por completo.");
-						carrito_local = []; // Limpiamos la vista
-						renderizar_carrito();
-					} else {
-						alert("Error al vaciar: " + JSON.stringify(result));
+				
+				// Formato estricto para vaciar todo
+				cliente.delete("elimina_carrito_compra", 
+					{ 
+						id_usuario: id_usuario,
+						token: token
+					}, 
+					function(code, result) {
+						if (code == 200) {
+							alert("Carrito vaciado por completo.");
+							carrito_local = []; // Limpiamos la vista
+							renderizar_carrito();
+						} else {
+							alert("Error al vaciar: " + (result.mensaje || JSON.stringify(result)));
+						}
 					}
-				});
-			}	
+				);
+			}
 
 
 
