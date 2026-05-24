@@ -492,8 +492,18 @@
 			</div>
 		</div>
 
+		<div id="login">
+			<h2 style="text-align:center">Acceso al sistema</h2>
+			Email<br>
+			<input type="email" id="login_email" value="" style="width:250px"/><br><br>
+			Password<br>
+			<input type="password" id="login_password" value="" style="width:250px"/><br><br>
+			<button type="button" onclick="login()" style="width:250px;height:40px">Aceptar</button><br>  <br>
+			<button type="button" onclick="limpia_alta();oculta('login');muestra('alta_usuario')" style="width:250px;height:40px">Registro de usuario</button><br><br>
+		</div>
+	</div>
 
-		<!-- Estilos RF-FE-->
+	<!-- Estilos RF-FE 1-->
 		 <div id="captura_articulo" style="display:none" class="container mt-4 mb-5">
 			<div class="row justify-content-center">
 				<div class="col-12 col-md-8 col-lg-6">
@@ -541,15 +551,6 @@
 			</div>
 		</div>
 
-		<div id="login">
-			<h2 style="text-align:center">Acceso al sistema</h2>
-			Email<br>
-			<input type="email" id="login_email" value="" style="width:250px"/><br><br>
-			Password<br>
-			<input type="password" id="login_password" value="" style="width:250px"/><br><br>
-			<button type="button" onclick="login()" style="width:250px;height:40px">Aceptar</button><br>  <br>
-			<button type="button" onclick="limpia_alta();oculta('login');muestra('alta_usuario')" style="width:250px;height:40px">Registro de usuario</button><br><br>
-		</div>
-	</div>
+
 	</body>
 </html>
