@@ -468,41 +468,39 @@
 
 					var cliente = new WSClient(URL);
 					
-					// 1. Los mandamos en el Body (JSON) por si Java usa @Consumes
-					var compra_body = { 
-						id_articulo: id_art, 
-						id: id_art, 
-						cantidad: cantidad 
-					};
-					
-					// 2. Y TAMBIÉN los mandamos en la URL por si Java usa @QueryParam
-					var ruta_segura = "compra_articulo?id_usuario=" + id_usuario + 
-									  "&token=" + token + 
-									  "&id_articulo=" + id_art + 
-									  "&cantidad=" + cantidad;
-
-					// 3. Volvemos al PUT que es el método que Tomcat está exigiendo
-					cliente.put(ruta_segura, compra_body, function(code, result) {
-						if (code == 200) {
-							alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
-							
-							// Guardamos en el carrito local
-							var existe = carrito_local.find(item => (item.id_articulo || item.id) == id_art);
-							if (existe) {
-								existe.cantidad += cantidad;
+					// AQUÍ ESTÁ LA CORRECCIÓN EXACTA PARA WSCLIENT.JS
+					// Pasamos los 4 parámetros estrictos que exige el PUT:
+					cliente.put("compra_articulo", 
+						{ // 1. Parámetros de la URL (Autenticación)
+							id_usuario: id_usuario,
+							token: token
+						}, 
+						{ // 2. Parámetros del Body (El JSON de la compra)
+							id_articulo: id_art,
+							cantidad: cantidad
+						}, 
+						function(code, result) { // 3. Función callback de respuesta
+							if (code == 200) {
+								alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
+								
+								// Actualizamos la vista de nuestro carrito local
+								var existe = carrito_local.find(item => (item.id_articulo || item.id) == id_art);
+								if (existe) {
+									existe.cantidad += cantidad;
+								} else {
+									carrito_local.push({
+										id_articulo: id_art,
+										nombre: art.nombre,
+										precio: art.precio,
+										cantidad: cantidad,
+										foto: art.foto
+									});
+								}
 							} else {
-								carrito_local.push({
-									id_articulo: id_art,
-									nombre: art.nombre,
-									precio: art.precio,
-									cantidad: cantidad,
-									foto: art.foto
-								});
+								alert("Error al comprar: " + (result.mensaje || JSON.stringify(result)));
 							}
-						} else {
-							alert("Error al comprar (" + code + "): " + JSON.stringify(result));
 						}
-					});
+					);
 
 				} catch(error) {
 					alert("Error en el código: " + error.message);
