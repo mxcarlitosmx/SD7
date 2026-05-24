@@ -447,6 +447,8 @@
 				get("resultados_contenedor").innerHTML = html;
 			}
 
+			var carrito_local = []; // Arreglo para guardar visualmente lo que compramos
+
 			function comprar_articulo(index) {
 				var art = resultados_busqueda[index];
 				var cantidad = parseInt(get("cant_" + art.id_articulo).value);
@@ -459,14 +461,103 @@
 				var cliente = new WSClient(URL);
 				var compra = { id_articulo: art.id_articulo, cantidad: cantidad };
 				
+				// Llamada al Back-End (RF-BE-3)
 				cliente.put("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, function(code, result) {
 					if (code == 200) {
 						alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
+						
+						// Si hay éxito, lo agregamos a nuestro carrito visual
+						var existe = carrito_local.find(item => item.id_articulo == art.id_articulo);
+						if (existe) {
+							existe.cantidad += cantidad;
+						} else {
+							carrito_local.push({
+								id_articulo: art.id_articulo,
+								nombre: art.nombre,
+								precio: art.precio,
+								cantidad: cantidad,
+								foto: art.foto
+							});
+						}
 					} else {
 						alert("No se pudo comprar: " + (result.mensaje || "Stock insuficiente"));
 					}
 				});
-			}			
+			}
+
+			// LOGICA PARA RF-FE-2.3 a 2.5: EL CARRITO
+			function ver_carrito() {
+				oculta('compra_articulos');
+				muestra('articulos_carrito');
+				renderizar_carrito();
+			}
+
+			function renderizar_carrito() {
+				var html = "";
+				var total = 0;
+
+				if (carrito_local.length === 0) {
+					html = `<tr><td colspan="6" class="text-center text-muted p-4">Tu carrito está vacío</td></tr>`;
+				} else {
+					for (var i = 0; i < carrito_local.length; i++) {
+						var item = carrito_local[i];
+						var costo = item.cantidad * item.precio;
+						total += costo;
+						var img_src = item.foto != null ? "data:image/jpeg;base64," + item.foto : "/usuario_sin_foto.png";
+
+						html += `
+						<tr class="align-middle">
+							<td><img src="${img_src}" width="50" class="img-thumbnail"></td>
+							<td class="fw-bold text-dark">${item.nombre}</td>
+							<td class="text-center">${item.cantidad}</td>
+							<td>$${item.precio.toFixed(2)}</td>
+							<td class="fw-bold text-success">$${costo.toFixed(2)}</td>
+							<td class="text-center">
+								<button class="btn btn-sm btn-outline-danger" onclick="eliminar_item_carrito(${item.id_articulo}, ${i})">Eliminar</button>
+							</td>
+						</tr>`;
+					}
+				}
+
+				get("carrito_cuerpo_tabla").innerHTML = html;
+				get("carrito_total_compra").innerText = "$" + total.toFixed(2);
+			}
+
+			function eliminar_item_carrito(id_art, index) {
+				if (!confirm("¿Deseas eliminar este artículo del carrito?")) return;
+				
+				var cliente = new WSClient(URL);
+				// Llamada al Back-End (RF-BE-4)
+				cliente.delete("elimina_articulo_carrito_compra?id_usuario=" + id_usuario + "&token=" + token + "&id_articulo=" + id_art, function(code, result) {
+					if (code == 200) {
+						alert("Artículo eliminado. El stock ha sido devuelto.");
+						carrito_local.splice(index, 1); // Lo borramos de la vista
+						renderizar_carrito();
+					} else {
+						alert("Error al eliminar: " + JSON.stringify(result));
+					}
+				});
+			}
+
+			function vaciar_carrito() {
+				if (carrito_local.length === 0) {
+					alert("El carrito ya está vacío.");
+					return;
+				}
+				if (!confirm("¿Deseas vaciar por completo el carrito de compra?")) return;
+
+				var cliente = new WSClient(URL);
+				// Llamada al Back-End (RF-BE-5)
+				cliente.delete("elimina_carrito_compra?id_usuario=" + id_usuario + "&token=" + token, function(code, result) {
+					if (code == 200) {
+						alert("Carrito vaciado por completo.");
+						carrito_local = []; // Limpiamos la vista
+						renderizar_carrito();
+					} else {
+						alert("Error al vaciar: " + JSON.stringify(result));
+					}
+				});
+			}	
 
 
 
@@ -625,7 +716,7 @@
 			<div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm border border-success">
 				<button class="btn btn-outline-secondary btn-sm" onclick="oculta('compra_articulos'); muestra('menu')">⬅ Menú</button>
 				<h4 class="mb-0 text-success fw-bold text-center">Tienda</h4>
-				<button class="btn btn-warning fw-bold btn-sm" onclick="alert('En el próximo paso conectaremos el carrito')">🛒 Carrito</button>
+				<button class="btn btn-warning fw-bold btn-sm" onclick="ver_carrito()">🛒 Carrito</button>
 			</div>
 
 			<div class="card shadow-sm border-0 mb-4 bg-light">
@@ -642,6 +733,47 @@
 			</div>
 			
 		</div>
+
+
+
+		<div id="articulos_carrito" style="display:none" class="container mt-4 mb-5">
+		<div class="card shadow-sm border-warning">
+			<div class="card-header bg-warning text-dark text-center fw-bold d-flex justify-content-between align-items-center">
+				<h4 class="mb-0 m-auto">🛒 Artículos en el Carrito</h4>
+			</div>
+			<div class="card-body p-3">
+				
+				<div class="table-responsive">
+					<table class="table table-hover text-nowrap">
+						<thead class="table-light">
+							<tr>
+								<th>Foto</th>
+								<th>Artículo</th>
+								<th class="text-center">Cantidad</th>
+								<th>Precio Unit.</th>
+								<th>Costo</th>
+								<th class="text-center">Acción</th>
+							</tr>
+						</thead>
+						<tbody id="carrito_cuerpo_tabla">
+							</tbody>
+					</table>
+				</div>
+
+				<div class="d-flex justify-content-end align-items-center mt-3 p-3 bg-light rounded">
+					<span class="fs-5 me-3 fw-bold">Total de la compra:</span>
+					<span class="fs-4 fw-bold text-success" id="carrito_total_compra">$0.00</span>
+				</div>
+
+				<div class="d-grid gap-3 mt-4">
+					<button type="button" class="btn btn-outline-danger btn-lg" onclick="vaciar_carrito()">Eliminar Carrito</button>
+					<button type="button" class="btn btn-primary btn-lg" onclick="oculta('articulos_carrito'); muestra('compra_articulos');">Seguir Comprando</button>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
 
 
 	</body>
