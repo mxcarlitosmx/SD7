@@ -453,13 +453,12 @@
 				try {
 					var art = resultados_busqueda[index];
 					
-					// 1. Validamos si tu back-end manda 'id_articulo' o solo 'id'
+					// Validamos el ID
 					var id_art = art.id_articulo || art.id; 
 					
-					// 2. Tomamos el valor de la caja de texto con validación
 					var input_cant = document.getElementById("cant_" + id_art);
 					if (!input_cant) {
-						alert("No se encontró la caja de texto. ID detectado: " + id_art);
+						alert("No se encontró la caja de texto. ID: " + id_art);
 						return;
 					}
 
@@ -472,8 +471,8 @@
 					var cliente = new WSClient(URL);
 					var compra = { id_articulo: id_art, cantidad: cantidad };
 					
-					// 3. Procesamos la respuesta del servidor
-					var procesar_respuesta = function(code, result) {
+					// Hacemos la petición ESTRICTAMENTE por POST (soluciona el Error 405)
+					cliente.post("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, function(code, result) {
 						if (code == 200) {
 							alert("¡Compraste " + cantidad + " unidad(es) de " + art.nombre + " exitosamente!");
 							
@@ -491,20 +490,13 @@
 								});
 							}
 						} else {
-							alert("Error del servidor (" + code + "): " + JSON.stringify(result));
+							// Si caducó el token u ocurre otro error, nos avisará claramente
+							alert("Error al comprar: " + (result.mensaje || JSON.stringify(result)));
 						}
-					};
-
-					// 4. Verificamos si WSClient tiene el método PUT, si no, lo forzamos con POST
-					if (typeof cliente.put !== 'function') {
-						cliente.post("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, procesar_respuesta);
-					} else {
-						cliente.put("compra_articulo?id_usuario=" + id_usuario + "&token=" + token, compra, procesar_respuesta);
-					}
+					});
 
 				} catch(error) {
-					// Si algo más falla, esto te avisará en pantalla en lugar de quedarse pasmado
-					alert("El código se detuvo por este error: " + error.message);
+					alert("Error en el código: " + error.message);
 				}
 			}
 
